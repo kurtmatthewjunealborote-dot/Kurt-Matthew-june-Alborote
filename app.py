@@ -1,28 +1,52 @@
-def display_profile():
-    # 1. Collecting User Input
-    print("Please enter the following details:")
-    name = input("Name: ")
-    address = input("Address: ")
-    birthday = input("Birthday (e.g., Month DD, YYYY): ")
+from flask import Flask, jsonify, request
 
-    # 2. Organizing the data into a dictionary
-    profile = {
-        "NAME": name,
-        "ADDRESS": address,
-        "BIRTHDAY": birthday
+app = Flask(__name__)
+
+# Mock database: A list of students
+students = [
+    {"id": 1, "name": "Jane Doe", "grade": 10, "section": "Zechariah"},
+    {"id": 2, "name": "John Smith", "grade": 11, "section": "Genesis"}
+]
+
+@app.route('/')
+def home():
+    return jsonify({
+        "status": "Online",
+        "message": "Welcome to the Student Portal API",
+        "endpoints": ["/students (GET)", "/student/<id> (GET)", "/student (POST)"]
+    })
+
+# Feature 1: Get ALL students
+@app.route('/students', methods=['GET'])
+def get_all_students():
+    return jsonify({"count": len(students), "students": students})
+
+# Feature 2: Get a SPECIFIC student by ID (Dynamic Route)
+@app.route('/student/<int:student_id>', methods=['GET'])
+def get_student(student_id):
+    student = next((s for s in students if s["id"] == student_id), None)
+    if student:
+        return jsonify(student)
+    return jsonify({"error": "Student not found"}), 404
+
+# Feature 3: ADD a new student (POST request)
+@app.route('/student', methods=['POST'])
+def add_student():
+    data = request.get_json()
+    
+    # Basic validation
+    if not data or "name" not in data:
+        return jsonify({"error": "Missing required data"}), 400
+    
+    new_student = {
+        "id": len(students) + 1,
+        "name": data.get("name"),
+        "grade": data.get("grade", "N/A"),
+        "section": data.get("section", "General")
     }
+    students.append(new_student)
+    return jsonify({"message": "Student added successfully!", "student": new_student}), 201
 
-    # 3. Displaying the information
-    print("\n" + "="*30)
-    print("       USER PROFILE")
-    print("="*30)
-    
-    for key, value in profile.items():
-        # .title() makes the labels look neat
-        print(f"{key:<10}: {value}")
-    
-    print("="*30)
-
-# Run the function
-if __name__ == "__main__":
-    display_profile()
+if __name__ == '__main__':
+    # Setting debug=True helps during development
+    app.run(debug=True)
