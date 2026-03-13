@@ -2,122 +2,139 @@ from flask import Flask, jsonify, request, render_template_string, redirect, url
 
 app = Flask(__name__)
 
-# Simulated Database
-student_database = [
-    {"id": 1, "name": "Juan Dela Cruz", "grade": 10, "section": "Zechariah"},
+# Simulated Database for Events
+event_database = [
+    {"id": 1, "name": "Tech Conference 2026", "date": "2026-05-15", "location": "Manila Convention Center", "status": "Upcoming"},
 ]
 
-# Modern UI with CSS (Glassmorphism + Gradients)
+# Refactored UI for Event Management
 HTML_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Management System</title>
+    <title>Event Planner Pro</title>
     <style>
         :root {
-            --primary: #6a11cb;
-            --secondary: #2575fc;
-            --glass: rgba(255, 255, 255, 0.2);
+            --primary: #1a1a2e;
+            --secondary: #16213e;
+            --accent: #e94560;
+            --glass: rgba(255, 255, 255, 0.1);
         }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            font-family: 'Segoe UI', sans-serif;
+            background: radial-gradient(circle at top left, var(--primary), var(--secondary));
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             margin: 0;
-            color: white;
+            color: #eee;
         }
         .container {
             background: var(--glass);
-            backdrop-filter: blur(15px);
-            padding: 2rem;
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            backdrop-filter: blur(20px);
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
             width: 90%;
-            max-width: 800px;
+            max-width: 900px;
             border: 1px solid rgba(255,255,255,0.1);
         }
-        h2 { text-align: center; margin-bottom: 1.5rem; }
+        h2 { text-align: center; margin-bottom: 2rem; font-weight: 300; letter-spacing: 2px; }
         .form-group { margin-bottom: 15px; }
-        input {
-            width: 100%;
-            padding: 10px;
-            border-radius: 10px;
-            border: none;
-            background: rgba(255,255,255,0.9);
-            margin-top: 5px;
-            box-sizing: border-box;
-        }
-        .btn {
+        input, select {
             width: 100%;
             padding: 12px;
+            border-radius: 12px;
             border: none;
-            border-radius: 10px;
-            background: #00d2ff;
+            background: rgba(255,255,255,0.08);
+            margin-top: 5px;
+            box-sizing: border-box;
+            color: white;
+            outline: none;
+        }
+        input::placeholder { color: #bbb; }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            background: var(--accent);
             color: white;
             font-weight: bold;
             cursor: pointer;
-            transition: 0.3s;
+            transition: all 0.3s ease;
             margin-top: 10px;
+            text-transform: uppercase;
         }
-        .btn:hover { background: #3a7bd5; transform: translateY(-2px); }
-        .btn-delete { background: #ff4b2b; width: auto; padding: 5px 10px; font-size: 12px; }
+        .btn:hover { filter: brightness(1.2); transform: translateY(-3px); }
+        .btn-delete { background: #ff4b2b; width: auto; padding: 6px 12px; font-size: 11px; }
+        
         table {
             width: 100%;
-            margin-top: 20px;
-            border-collapse: collapse;
-            background: rgba(0,0,0,0.1);
-            border-radius: 10px;
-            overflow: hidden;
+            margin-top: 25px;
+            border-collapse: separate;
+            border-spacing: 0 10px;
         }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        th { background: rgba(0,0,0,0.2); }
+        th { text-align: left; padding: 15px; color: #888; font-size: 13px; text-transform: uppercase; }
+        td { padding: 15px; background: rgba(255,255,255,0.05); }
+        td:first-child { border-radius: 12px 0 0 12px; }
+        td:last-child { border-radius: 0 12px 12px 0; }
+        
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            background: rgba(233, 69, 96, 0.2);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+        }
         .search-box { margin-bottom: 20px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>🎓 Student Registry</h2>
+        <h2>📅 Event Organizer</h2>
         
-        <form action="/add_student" method="post">
+        <form action="/add_event" method="post">
             <div class="form-group">
-                <input type="text" name="name" placeholder="Full Name" required>
+                <input type="text" name="name" placeholder="Event Name" required>
             </div>
             <div style="display: flex; gap: 10px;">
-                <input type="number" name="grade" placeholder="Grade Level" required>
-                <input type="text" name="section" placeholder="Section" required>
+                <input type="date" name="date" required>
+                <input type="text" name="location" placeholder="Location" required>
             </div>
-            <button type="submit" class="btn">Add Student Record</button>
+            <button type="submit" class="btn">Schedule New Event</button>
         </form>
 
-        <hr style="margin: 2rem 0; opacity: 0.2;">
+        <hr style="margin: 2rem 0; opacity: 0.1;">
 
         <div class="search-box">
-             <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search names or sections...">
+             <input type="text" id="searchInput" onkeyup="searchTable()" placeholder="Search events or locations...">
         </div>
 
-        <table id="studentTable">
+        <table id="eventTable">
             <thead>
                 <tr>
-                    <th>Name</th>
-                    <th>Grade</th>
-                    <th>Section</th>
+                    <th>Event Details</th>
+                    <th>Date</th>
+                    <th>Location</th>
+                    <th>Status</th>
                     <th>Action</th>
                 </tr>
             </thead>
             <tbody>
-                {% for student in students %}
+                {% for event in events %}
                 <tr>
-                    <td>{{ student.name }}</td>
-                    <td>{{ student.grade }}</td>
-                    <td>{{ student.section }}</td>
+                    <td><strong>{{ event.name }}</strong></td>
+                    <td>{{ event.date }}</td>
+                    <td>{{ event.location }}</td>
+                    <td><span class="status-badge">{{ event.status }}</span></td>
                     <td>
-                        <form action="/delete/{{ student.id }}" method="POST" style="display:inline;">
-                            <button class="btn btn-delete">Delete</button>
+                        <form action="/delete/{{ event.id }}" method="POST" style="display:inline;">
+                            <button class="btn btn-delete">Cancel</button>
                         </form>
                     </td>
                 </tr>
@@ -129,7 +146,7 @@ HTML_TEMPLATE = '''
     <script>
         function searchTable() {
             let input = document.getElementById("searchInput").value.toUpperCase();
-            let table = document.getElementById("studentTable");
+            let table = document.getElementById("eventTable");
             let tr = table.getElementsByTagName("tr");
 
             for (let i = 1; i < tr.length; i++) {
@@ -144,33 +161,33 @@ HTML_TEMPLATE = '''
 
 @app.route('/')
 def home():
-    # Pass the student database to the HTML template
-    return render_template_string(HTML_TEMPLATE, students=student_database)
+    return render_template_string(HTML_TEMPLATE, events=event_database)
 
-@app.route('/add_student', methods=['POST'])
-def add_student_form():
+@app.route('/add_event', methods=['POST'])
+def add_event_form():
     name = request.form.get('name')
-    grade = request.form.get('grade')
-    section = request.form.get('section')
+    date = request.form.get('date')
+    location = request.form.get('location')
     
-    new_student = {
-        "id": len(student_database) + 1,
+    new_event = {
+        "id": len(event_database) + 1,
         "name": name, 
-        "grade": grade, 
-        "section": section
+        "date": date, 
+        "location": location,
+        "status": "Upcoming"
     }
-    student_database.append(new_student)
+    event_database.append(new_event)
     return redirect(url_for('home'))
 
-@app.route('/delete/<int:student_id>', methods=['POST'])
-def delete_student(student_id):
-    global student_database
-    student_database = [s for s in student_database if s['id'] != student_id]
+@app.route('/delete/<int:event_id>', methods=['POST'])
+def delete_event(event_id):
+    global event_database
+    event_database = [e for e in event_database if e['id'] != event_id]
     return redirect(url_for('home'))
 
-@app.route('/api/students', methods=['GET'])
-def get_students():
-    return jsonify(student_database)
+@app.route('/api/events', methods=['GET'])
+def get_events():
+    return jsonify(event_database)
 
 if __name__ == '__main__':
     app.run(debug=True)
