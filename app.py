@@ -4,7 +4,151 @@ app = Flask(__name__)
 
 # Simulated Database with nested Participants
 event_database = [
+    {from flask import Flask, request, render_template_string, redirect, url_for
+from datetime import datetime
+
+app = Flask(__name__)
+
+# Simulated Database with more detailed participant objects
+event_database = [
     {
+        "id": 1, 
+        "name": "Tech Conference 2026", 
+        "date": "2026-05-15", 
+        "location": "Manila Convention Center", 
+        "status": "Open",
+        "participants": [
+            {"name": "Alice Robertson", "email": "alice@example.com", "time": "2026-01-10"},
+        ]
+    },
+    {
+        "id": 2, 
+        "name": "Music Festival", 
+        "date": "2026-07-20", 
+        "location": "BGC Amphitheater", 
+        "status": "Open",
+        "participants": []
+    },
+]
+
+COMMON_STYLE = '''
+<style>
+    :root { --primary: #0f172a; --secondary: #1e293b; --accent: #38bdf8; --glass: rgba(255, 255, 255, 0.05); }
+    body {
+        font-family: 'Inter', sans-serif;
+        background: radial-gradient(circle at top right, var(--secondary), var(--primary));
+        min-height: 100vh; margin: 0; color: #f1f5f9; display: flex; justify-content: center; padding: 40px 20px;
+    }
+    .container {
+        background: var(--glass); backdrop-filter: blur(12px); padding: 2.5rem;
+        border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+        width: 100%; max-width: 900px; height: fit-content;
+    }
+    .event-card {
+        background: rgba(255,255,255,0.03); border-radius: 15px; padding: 20px;
+        margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+    .btn {
+        padding: 12px 24px; border: none; border-radius: 8px;
+        background: var(--accent); color: #0f172a; font-weight: 600;
+        cursor: pointer; transition: 0.2s; text-decoration: none;
+    }
+    .btn:hover { opacity: 0.9; transform: scale(1.02); }
+    .btn-outline { background: transparent; border: 1px solid var(--accent); color: var(--accent); }
+    input {
+        width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; 
+        border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;
+    }
+    .badge { font-size: 0.75rem; padding: 4px 12px; border-radius: 99px; background: #22c55e; color: white; }
+</style>
+'''
+
+# --- TEMPLATES ---
+
+MAIN_PAGE = COMMON_STYLE + '''
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h2>🚀 Available Events</h2>
+        <span style="opacity: 0.6;">Select an event to register your attendance</span>
+    </div>
+
+    {% for event in events %}
+    <div class="event-card">
+        <div>
+            <span class="badge">{{ event.status }}</span>
+            <h3 style="margin: 10px 0 5px 0;">{{ event.name }}</h3>
+            <p style="margin: 0; opacity: 0.7; font-size: 0.9rem;">📍 {{ event.location }} | 📅 {{ event.date }}</p>
+        </div>
+        <div>
+            <a href="/register/{{ event.id }}" class="btn">Register Attendance</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+'''
+
+REGISTRATION_PAGE = COMMON_STYLE + '''
+<div class="container" style="max-width: 500px;">
+    <a href="/" style="color: var(--accent); text-decoration: none; font-size: 0.9rem;">← Back to Events</a>
+    <h2 style="margin-top: 20px;">Register for Attendance</h2>
+    <p style="opacity: 0.8;">Event: <strong>{{ event.name }}</strong></p>
+    
+    <form action="/submit_registration/{{ event.id }}" method="POST" style="margin-top: 20px;">
+        <label>Full Name</label>
+        <input type="text" name="full_name" placeholder="John Doe" required>
+        
+        <label>Email Address</label>
+        <input type="email" name="email" placeholder="john@example.com" required>
+        
+        <button type="submit" class="btn" style="width: 100%; margin-top: 15px;">Confirm Registration</button>
+    </form>
+</div>
+'''
+
+SUCCESS_PAGE = COMMON_STYLE + '''
+<div class="container" style="max-width: 500px; text-align: center;">
+    <h1 style="font-size: 4rem; margin: 0;">✅</h1>
+    <h2>Registration Confirmed!</h2>
+    <p>You have been added to the guest list for <strong>{{ event_name }}</strong>.</p>
+    <br>
+    <a href="/" class="btn btn-outline">Return Home</a>
+</div>
+'''
+
+# --- ROUTES ---
+
+@app.route('/')
+def home():
+    return render_template_string(MAIN_PAGE, events=event_database)
+
+@app.route('/register/<int:event_id>')
+def register_view(event_id):
+    event = next((e for e in event_database if e['id'] == event_id), None)
+    if event:
+        return render_template_string(REGISTRATION_PAGE, event=event)
+    return "Event not found", 404
+
+@app.route('/submit_registration/<int:event_id>', methods=['POST'])
+def submit_registration(event_id):
+    event = next((e for e in event_database if e['id'] == event_id), None)
+    if event:
+        name = request.form.get('full_name')
+        email = request.form.get('email')
+        
+        # Add participant with timestamp
+        new_participant = {
+            "name": name,
+            "email": email,
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M")
+        }
+        event['participants'].append(new_participant)
+        
+        return render_template_string(SUCCESS_PAGE, event_name=event['name'])
+    return "Error processing registration", 400
+
+if __name__ == '__main__':
+    app.run(debug=True)
         "id": 1, 
         "name": "Tech Conference 2026", 
         "date": "2026-05-15", 
